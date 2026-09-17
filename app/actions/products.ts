@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
-import { saveUploadedImage } from "@/lib/uploads";
+import { saveUploadedImage, deleteUploadedImage } from "@/lib/uploads";
 import { PRODUCT_CATEGORIES, ProductCategoryValue } from "@/lib/constants";
 
 async function requireAdmin() {
@@ -101,7 +101,11 @@ export async function markProductSold(productId: string, sold: boolean) {
 
 export async function deleteProduct(productId: string): Promise<never> {
   await requireAdmin();
-  const product = await prisma.product.delete({ where: { id: productId } });
+  const product = await prisma.product.delete({
+    where: { id: productId },
+    include: { images: true },
+  });
+  await Promise.all(product.images.map((image) => deleteUploadedImage(image.url)));
   revalidatePath("/");
   revalidatePath(`/category/${product.category}`);
   redirect(`/category/${product.category}`);
@@ -131,5 +135,6 @@ export async function addProductImage(productId: string, formData: FormData) {
 export async function deleteProductImage(imageId: string) {
   await requireAdmin();
   const image = await prisma.productImage.delete({ where: { id: imageId } });
+  await deleteUploadedImage(image.url);
   revalidatePath(`/product/${image.productId}`);
 }

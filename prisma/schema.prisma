@@ -3,8 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (e.g. Neon/Vercel Postgres's pgbouncer URL) — used by
+  // the running app, where many short-lived serverless connections need to
+  // share a small pool.
+  url       = env("DATABASE_URL")
+  // Direct (unpooled) connection — used only for migrations, which pgbouncer
+  // in transaction mode can't reliably run.
+  directUrl = env("DIRECT_URL")
 }
 
 enum ProductCategory {
