@@ -81,10 +81,9 @@ internal fields or admin controls.
 
 ## Branding
 
-The header currently renders a placeholder text wordmark
-(`components/Logo.tsx`). Swap in the studio's real logo by adding an image
-file at `public/logo.svg` (or `.png`) and replacing that component with an
-`<Image>` element.
+The header renders the studio's logo (`public/brand/logo.png`, extracted
+from the PRD) via `components/Logo.tsx`. Replace that file to swap logos —
+update the `width`/`height` props to match the new image's aspect ratio.
 
 ## Notes on scope vs. the PRD
 
