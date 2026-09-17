@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductCategory {
+  mug
+  planter
+  bowl
+  handmade
+  other
+}
+
+model Pattern {
+  id            String    @id @default(cuid())
+  name          String
+  difficulty    Int // 1-5
+  enjoyment     Int // 1-5
+  preference    Int // 1-5
+  favorite      Boolean   @default(false)
+  referenceImage String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[]
+}
+
+enum GlazeType {
+  glaze
+  underglaze
+}
+
+model Color {
+  id             String    @id @default(cuid())
+  name           String
+  brand          String?
+  glazeType      GlazeType @default(glaze)
+  bestForInterior Boolean  @default(true)
+  bestForExterior Boolean  @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       ProductColor[]
+}
+
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  category      ProductCategory
+  patternId     String?
+  pattern       Pattern?  @relation(fields: [patternId], references: [id])
+  costWholesale Float?
+  costRetail    Float?
+  sold          Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  images        ProductImage[]
+  colors        ProductColor[]
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model ProductColor {
+  productId String
+  colorId   String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     Color   @relation(fields: [colorId], references: [id], onDelete: Cascade)
+
+  @@id([productId, colorId])
+}
