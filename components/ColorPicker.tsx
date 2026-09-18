@@ -17,6 +17,12 @@ export default function ColorPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showAddNew, setShowAddNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newBrand, setNewBrand] = useState("");
+  const [newGlazeType, setNewGlazeType] = useState<"glaze" | "underglaze">("glaze");
+  const [newBestForInterior, setNewBestForInterior] = useState(true);
+  const [newBestForExterior, setNewBestForExterior] = useState(false);
+  const [newNotes, setNewNotes] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +37,20 @@ export default function ColorPicker({
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  function handleCreate(formData: FormData) {
+  function handleCreate() {
+    // Built manually rather than from a <form> — this picker's "add new"
+    // controls render inside the page's outer product/edit form, and HTML
+    // doesn't allow nested <form> elements (the browser silently drops the
+    // inner one), so a real nested form here would eat the outer form's
+    // submit instead of creating the color.
+    const formData = new FormData();
+    formData.set("name", newName);
+    formData.set("brand", newBrand);
+    formData.set("glazeType", newGlazeType);
+    if (newBestForInterior) formData.set("bestForInterior", "on");
+    if (newBestForExterior) formData.set("bestForExterior", "on");
+    formData.set("notes", newNotes);
+
     setError(null);
     startTransition(async () => {
       try {
@@ -40,6 +59,12 @@ export default function ColorPicker({
         setOptions((prev) => [option, ...prev]);
         setSelectedIds((prev) => [...prev, option.id]);
         setShowAddNew(false);
+        setNewName("");
+        setNewBrand("");
+        setNewGlazeType("glaze");
+        setNewBestForInterior(true);
+        setNewBestForExterior(false);
+        setNewNotes("");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not create color");
       }
@@ -107,32 +132,48 @@ export default function ColorPicker({
                 + Add new color
               </button>
             ) : (
-              <form action={handleCreate} className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <input
-                  name="name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
                   placeholder="Color name"
-                  required
                   className="rounded border border-border px-2 py-1.5 text-sm"
                 />
                 <input
-                  name="brand"
+                  value={newBrand}
+                  onChange={(e) => setNewBrand(e.target.value)}
                   placeholder="Brand"
                   className="rounded border border-border px-2 py-1.5 text-sm"
                 />
-                <select name="glazeType" defaultValue="glaze" className="rounded border border-border px-2 py-1.5 text-sm">
+                <select
+                  value={newGlazeType}
+                  onChange={(e) => setNewGlazeType(e.target.value as "glaze" | "underglaze")}
+                  className="rounded border border-border px-2 py-1.5 text-sm"
+                >
                   <option value="glaze">Glaze</option>
                   <option value="underglaze">Underglaze</option>
                 </select>
                 <div className="flex gap-3 text-sm">
                   <label className="flex items-center gap-1.5">
-                    <input type="checkbox" name="bestForInterior" defaultChecked /> Interior
+                    <input
+                      type="checkbox"
+                      checked={newBestForInterior}
+                      onChange={(e) => setNewBestForInterior(e.target.checked)}
+                    />{" "}
+                    Interior
                   </label>
                   <label className="flex items-center gap-1.5">
-                    <input type="checkbox" name="bestForExterior" /> Exterior
+                    <input
+                      type="checkbox"
+                      checked={newBestForExterior}
+                      onChange={(e) => setNewBestForExterior(e.target.checked)}
+                    />{" "}
+                    Exterior
                   </label>
                 </div>
                 <textarea
-                  name="notes"
+                  value={newNotes}
+                  onChange={(e) => setNewNotes(e.target.value)}
                   placeholder="Notes"
                   className="rounded border border-border px-2 py-1.5 text-sm"
                   rows={2}
@@ -140,9 +181,10 @@ export default function ColorPicker({
                 {error && <p className="text-xs text-red-600">{error}</p>}
                 <div className="flex gap-2">
                   <button
-                    type="submit"
-                    disabled={isPending}
-                    className="rounded bg-foreground px-3 py-1.5 text-sm text-background"
+                    type="button"
+                    onClick={handleCreate}
+                    disabled={isPending || !newName.trim()}
+                    className="rounded bg-foreground px-3 py-1.5 text-sm text-background disabled:opacity-50"
                   >
                     {isPending ? "Creating..." : "Create & select"}
                   </button>
@@ -154,7 +196,7 @@ export default function ColorPicker({
                     Cancel
                   </button>
                 </div>
-              </form>
+              </div>
             )}
           </div>
         </div>

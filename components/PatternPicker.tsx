@@ -25,6 +25,11 @@ export default function PatternPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showAddNew, setShowAddNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDifficulty, setNewDifficulty] = useState(3);
+  const [newEnjoyment, setNewEnjoyment] = useState(3);
+  const [newPreference, setNewPreference] = useState(3);
+  const [newFavorite, setNewFavorite] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +40,19 @@ export default function PatternPicker({
     [options, query]
   );
 
-  function handleCreate(formData: FormData) {
+  function handleCreate() {
+    // Built manually rather than from a <form> — this picker's "add new"
+    // controls render inside the page's outer product/edit form, and HTML
+    // doesn't allow nested <form> elements (the browser silently drops the
+    // inner one), so a real nested form here would eat the outer form's
+    // submit instead of creating the pattern.
+    const formData = new FormData();
+    formData.set("name", newName);
+    formData.set("difficulty", String(newDifficulty));
+    formData.set("enjoyment", String(newEnjoyment));
+    formData.set("preference", String(newPreference));
+    if (newFavorite) formData.set("favorite", "on");
+
     setError(null);
     startTransition(async () => {
       try {
@@ -52,6 +69,11 @@ export default function PatternPicker({
         setSelectedId(option.id);
         setShowAddNew(false);
         setOpen(false);
+        setNewName("");
+        setNewDifficulty(3);
+        setNewEnjoyment(3);
+        setNewPreference(3);
+        setNewFavorite(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not create pattern");
       }
@@ -129,27 +151,33 @@ export default function PatternPicker({
                 + Add new pattern
               </button>
             ) : (
-              <form action={handleCreate} className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <input
-                  name="name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
                   placeholder="Pattern name"
-                  required
                   className="rounded border border-border px-2 py-1.5 text-sm"
                 />
                 <div className="grid grid-cols-3 gap-2">
-                  <ScoreSelect name="difficulty" label="Difficulty" />
-                  <ScoreSelect name="enjoyment" label="Enjoyment" />
-                  <ScoreSelect name="preference" label="Preference" />
+                  <ScoreSelect label="Difficulty" value={newDifficulty} onChange={setNewDifficulty} />
+                  <ScoreSelect label="Enjoyment" value={newEnjoyment} onChange={setNewEnjoyment} />
+                  <ScoreSelect label="Preference" value={newPreference} onChange={setNewPreference} />
                 </div>
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="checkbox" name="favorite" /> Favorite
+                  <input
+                    type="checkbox"
+                    checked={newFavorite}
+                    onChange={(e) => setNewFavorite(e.target.checked)}
+                  />{" "}
+                  Favorite
                 </label>
                 {error && <p className="text-xs text-red-600">{error}</p>}
                 <div className="flex gap-2">
                   <button
-                    type="submit"
-                    disabled={isPending}
-                    className="rounded bg-foreground px-3 py-1.5 text-sm text-background"
+                    type="button"
+                    onClick={handleCreate}
+                    disabled={isPending || !newName.trim()}
+                    className="rounded bg-foreground px-3 py-1.5 text-sm text-background disabled:opacity-50"
                   >
                     {isPending ? "Creating..." : "Create & select"}
                   </button>
@@ -161,7 +189,7 @@ export default function PatternPicker({
                     Cancel
                   </button>
                 </div>
-              </form>
+              </div>
             )}
           </div>
         </div>
@@ -180,11 +208,23 @@ export default function PatternPicker({
   );
 }
 
-function ScoreSelect({ name, label }: { name: string; label: string }) {
+function ScoreSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
       {label}
-      <select name={name} defaultValue={3} className="rounded border border-border px-1 py-1 text-sm text-foreground">
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="rounded border border-border px-1 py-1 text-sm text-foreground"
+      >
         {[1, 2, 3, 4, 5].map((n) => (
           <option key={n} value={n}>
             {n}
