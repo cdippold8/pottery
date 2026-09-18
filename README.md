@@ -23,10 +23,10 @@ cost), and pattern/color management on the same pages.
    cp .env.example .env
    ```
 
-   - `DATABASE_URL` / `DIRECT_URL` — a Postgres connection string. For local
+   - `POSTGRES_URL` — a plain Postgres connection string. For local
      development, easiest is a local Postgres (`createdb pottery`, then
-     `postgresql://localhost/pottery` for both). See "Deploying" below for
-     the hosted equivalent.
+     `postgresql://localhost/pottery`). See "Deploying" below for the
+     hosted equivalent.
    - `ADMIN_PASSWORD` — the password that unlocks admin mode. Pick something
      real before deploying.
    - `SESSION_SECRET` — random string signing the admin session cookie.
@@ -64,50 +64,72 @@ since it's built by the Next.js team and has a generous free tier.
 
 You've already got that part done if you're reading this from the repo.
 
-### 2. Create a Postgres database
+### 2. Import the project into Vercel
 
-Pick one (both have a free tier and give you the two connection strings
-this app wants):
+Go to vercel.com → **Add New Project** → import this GitHub repo. Vercel
+detects Next.js automatically; no build settings to change.
 
-- **Neon** (neon.tech) — sign up, create a project, copy the "pooled
-  connection" string into `DATABASE_URL` and the "direct connection" string
-  into `DIRECT_URL`.
-- **Vercel Postgres** — created from inside your Vercel project's Storage
-  tab (see step 4); it fills in both env vars for you automatically.
+### 3. Create a Postgres database
 
-### 3. Create a Blob store for product photos
+In the project's **Storage** tab, click **Create Database** and pick a
+Postgres-flavored provider — either **Neon** or Vercel's own **Prisma
+Postgres** work. The app's schema (`prisma/schema.prisma`) always reads a
+variable literally named `POSTGRES_URL`, so after connecting whichever
+provider, check the project's **Environment Variables** page for that
+exact name:
 
-In your Vercel project's **Storage** tab, add a **Blob** store. Connecting
-it to the project automatically sets `BLOB_READ_WRITE_TOKEN` as an env var
-— you don't need to copy anything by hand.
+- **Prisma Postgres** already creates a `POSTGRES_URL` var alongside
+  `DATABASE_URL`/`PRISMA_DATABASE_URL` (those two are `prisma+postgres://`
+  Accelerate URLs for a Prisma Client setup this app doesn't use — ignore
+  them). Nothing more to do here.
+- **Neon** typically names its variable `DATABASE_URL` instead. If so, add
+  a new env var named `POSTGRES_URL` and paste in that same connection
+  string value.
 
-### 4. Import the project into Vercel
+### 4. Create a Blob store for product photos
 
-- Go to vercel.com → **Add New Project** → import this GitHub repo.
-- Vercel detects Next.js automatically; no build settings to change.
-- Under **Environment Variables**, add (if not already set by connecting
-  Postgres/Blob in steps 2–3): `ADMIN_PASSWORD`, `SESSION_SECRET`, and
-  optionally `ANTHROPIC_API_KEY`.
-- Deploy. The build runs `prisma migrate deploy` automatically (see
-  `package.json`), so the database schema is created on first deploy and
-  updated automatically on every deploy after that.
+Same **Storage** tab → **Create Database** (Blob stores live in the same
+menu) → **Blob**. This is supposed to auto-add `BLOB_READ_WRITE_TOKEN` to
+the project, but in practice it doesn't always show up in the Environment
+Variables list. If it's missing: open the Blob store itself (Storage →
+your store's name) and look for a "Quickstart" / ".env.local" tab, which
+shows a `BLOB_READ_WRITE_TOKEN=...` value you can copy into the project's
+Environment Variables by hand.
 
-### 5. Point your domain at it
+### 5. Add the remaining environment variables
 
-In the Vercel project's **Settings → Domains**, add the domain you own.
-Vercel gives you either:
-- an **A record** (or **ALIAS/ANAME**) to add at your domain's DNS
-  provider for the bare domain (`example.com`), or
-- a **CNAME record** for a subdomain (`shop.example.com`).
+On the project's **Environment Variables** page, add:
+- `ADMIN_PASSWORD` — the password that unlocks admin mode
+- `SESSION_SECRET` — random string; generate with `openssl rand -hex 32`
+- `ANTHROPIC_API_KEY` — optional, for the AI photo-guessing feature
 
-Add that record with whoever you registered/manage DNS through (the
-registrar, or wherever you pointed your nameservers). Vercel issues a free
-SSL certificate automatically once DNS resolves — this can take a few
-minutes to a few hours depending on DNS propagation.
+Then trigger a deploy (push any commit to the tracked branch — the
+Deployments tab should show it building). The build runs `prisma generate
+&& prisma migrate deploy` before `next build` (see `package.json`), so the
+database schema is created on first deploy and kept in sync after that. If
+the Deployments list stays empty even after importing the project, push a
+commit (an empty one is fine: `git commit --allow-empty -m "Trigger
+deploy"`) to fire it manually — Vercel's initial auto-deploy on import
+doesn't always fire.
+
+### 6. Point your domain at it
+
+On the project's **Domains** page, add the domain (or subdomain) you own —
+e.g. `inventory.example.com` if you want it on a subdomain rather than the
+bare domain. Vercel shows you the DNS record to add:
+- a **CNAME** record for a subdomain (most common — e.g. host `inventory`,
+  value `cname.vercel-dns.com`, exactly as shown, not substituted), or
+- an **A**/**ALIAS** record for the bare root domain.
+
+Add that record wherever you manage DNS for the domain (your registrar's
+dashboard, unless you've pointed nameservers elsewhere). Vercel issues a
+free SSL certificate automatically once DNS resolves — anywhere from a few
+minutes up to the 24–48 hour window your DNS provider may warn about, in
+practice usually much faster.
 
 ### After that
 
-Every push to your main branch redeploys automatically. Go to
+Every push to the tracked branch redeploys automatically. Go to
 `https://your-domain.com/admin/login` and sign in with `ADMIN_PASSWORD` to
 start adding inventory.
 
