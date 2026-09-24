@@ -83,15 +83,27 @@ export default function NewProductForm({
     <form action={handleSubmit} className="flex flex-col gap-5">
       <div>
         <label className="mb-1 block text-sm font-medium">Photos</label>
-        <input
-          ref={fileInputRef}
-          type="file"
-          name="images"
-          accept="image/*"
-          multiple
-          onChange={handleFilesChange}
-          className="block w-full text-sm"
-        />
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border py-8 text-sm text-muted hover:border-foreground hover:text-foreground">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 16V4M10 4L5 9M10 4l5 5M4 17h12"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Upload photos
+          <input
+            ref={fileInputRef}
+            type="file"
+            name="images"
+            accept="image/*"
+            multiple
+            onChange={handleFilesChange}
+            className="hidden"
+          />
+        </label>
         {previews.length > 0 && (
           <div className="mt-2 grid grid-cols-4 gap-2">
             {previews.map((src, i) => (

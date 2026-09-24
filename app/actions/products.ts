@@ -56,6 +56,16 @@ export async function createProduct(formData: FormData): Promise<never> {
     },
   });
 
+  // A pattern's reference image defaults to the first photo of the first
+  // product made with it -- only fills in a pattern that doesn't already
+  // have one, so it never overwrites a deliberately chosen reference image.
+  if (patternId && imageUrls.length > 0) {
+    await prisma.pattern.updateMany({
+      where: { id: patternId, referenceImage: null },
+      data: { referenceImage: imageUrls[0] },
+    });
+  }
+
   revalidatePath("/");
   revalidatePath(`/category/${category}`);
   redirect(`/product/${product.id}`);
@@ -95,6 +105,13 @@ export async function updateProduct(productId: string, formData: FormData) {
 export async function markProductSold(productId: string, sold: boolean) {
   await requireAdmin();
   await prisma.product.update({ where: { id: productId }, data: { sold } });
+  revalidatePath("/");
+  revalidatePath(`/product/${productId}`);
+}
+
+export async function toggleProductFavorite(productId: string, favorite: boolean) {
+  await requireAdmin();
+  await prisma.product.update({ where: { id: productId }, data: { favorite } });
   revalidatePath("/");
   revalidatePath(`/product/${productId}`);
 }

@@ -60,6 +60,7 @@ model Product {
   costWholesale Float?
   costRetail    Float?
   sold          Boolean   @default(false)
+  favorite      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   images        ProductImage[]

@@ -39,11 +39,12 @@ export function buildProductWhere(
   }
 
   if (isAdmin) {
+    if (params.favorite === "1") where.favorite = true;
+
     const patternFilter: Prisma.PatternWhereInput = {};
     if (params.difficulty) patternFilter.difficulty = Number(params.difficulty);
     if (params.enjoyment) patternFilter.enjoyment = Number(params.enjoyment);
     if (params.preference) patternFilter.preference = Number(params.preference);
-    if (params.favorite === "1") patternFilter.favorite = true;
     if (Object.keys(patternFilter).length > 0) {
       where.pattern = patternFilter;
     }

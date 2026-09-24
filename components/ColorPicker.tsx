@@ -82,7 +82,7 @@ export default function ColorPicker({
         type="button"
         data-testid="color-picker-trigger"
         onClick={() => setOpen((v) => !v)}
-        className="relative z-30 flex w-full flex-wrap items-center gap-1 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
+        className="relative z-20 flex w-full flex-wrap items-center gap-1 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
       >
         {selected.length === 0 && <span className="text-muted">Select colors</span>}
         {selected.map((c) => (
@@ -93,7 +93,7 @@ export default function ColorPicker({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
           <div className="p-2">
             <input
               type="text"

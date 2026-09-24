@@ -59,7 +59,19 @@ export default function PatternsManager({ initialPatterns }: { initialPatterns: 
         </label>
         <div>
           <label className="mb-1 block text-sm text-muted">Reference image</label>
-          <input type="file" name="referenceImageFile" accept="image/*" className="text-sm" />
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border py-4 text-sm text-muted hover:border-foreground hover:text-foreground">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M10 16V4M10 4L5 9M10 4l5 5M4 17h12"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Upload photo
+            <input type="file" name="referenceImageFile" accept="image/*" className="hidden" />
+          </label>
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
@@ -76,7 +88,7 @@ export default function PatternsManager({ initialPatterns }: { initialPatterns: 
           <div key={p.id} className="flex items-center gap-3 py-3">
             {p.referenceImage ? (
               <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded">
-                <Image src={p.referenceImage} alt="" fill className="object-cover" />
+                <Image src={p.referenceImage} alt="" fill className="scale-150 object-cover" />
               </span>
             ) : (
               <span className="h-12 w-12 shrink-0 rounded bg-neutral-100" />

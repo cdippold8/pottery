@@ -63,7 +63,7 @@ export default function ProductImages({
                 type="button"
                 onClick={() => handleDelete(image.id)}
                 disabled={isPending}
-                className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-2 py-1 text-xs text-white transition sm:opacity-0 sm:group-hover:opacity-100"
               >
                 Delete
               </button>

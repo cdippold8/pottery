@@ -27,7 +27,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     : [[], []];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <nav className="mb-6 text-sm text-muted">
         <Link href={`/category/${product.category}`} className="hover:text-foreground">
           {CATEGORY_LABELS[product.category]}
@@ -36,7 +36,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         <span className="text-foreground">{product.name}</span>
       </nav>
 
-      <div className="grid gap-8 sm:grid-cols-2">
+      <div className="grid gap-8 sm:grid-cols-[3fr_2fr]">
         <ProductImages
           productId={product.id}
           images={product.images}

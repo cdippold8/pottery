@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CATEGORY_LABELS, PRODUCT_CATEGORIES, ProductCategoryValue } from "@/lib/constants";
@@ -10,12 +11,14 @@ import { patternValue } from "@/lib/value";
 import { deleteProduct, markProductSold, updateProduct } from "@/app/actions/products";
 import PatternPicker, { PatternOption } from "./PatternPicker";
 import ColorPicker, { ColorOption } from "./ColorPicker";
+import FavoriteHeart from "./FavoriteHeart";
 
 type Product = {
   id: string;
   name: string;
   category: ProductCategoryValue;
   sold: boolean;
+  favorite: boolean;
   costWholesale: number | null;
   costRetail: number | null;
   pattern: PatternOption | null;
@@ -72,30 +75,52 @@ export default function ProductDetailPanel({
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold">{product.name}</h1>
-          <span className="rounded-full border border-border px-3 py-1 text-xs font-medium">
-            {product.sold ? "Sold" : "Available"}
-          </span>
+          <div className="flex items-center gap-2">
+            <FavoriteHeart productId={product.id} initialFavorite={product.favorite} size="lg" />
+            <span className="rounded-full border border-border px-3 py-1 text-xs font-medium">
+              {product.sold ? "Sold" : "Available"}
+            </span>
+          </div>
         </div>
         <p className="text-sm text-muted">{CATEGORY_LABELS[product.category]}</p>
 
-        {product.pattern && (
-          <div className="rounded-md border border-border p-3 text-sm">
-            <p className="font-medium">Pattern: {product.pattern.name}</p>
-            <p className="mt-1 text-muted">
-              Difficulty {product.pattern.difficulty} · Enjoyment {product.pattern.enjoyment} · Preference{" "}
-              {product.pattern.preference} · Value {value}
-            </p>
+        {value !== null && (
+          <div>
+            <p className="text-4xl font-bold text-foreground">{value}</p>
+            <p className="text-xs text-muted">Value</p>
           </div>
         )}
 
         {product.colors.length > 0 && (
-          <p className="text-sm">Colors: {product.colors.map((c) => c.color.name).join(", ")}</p>
+          <p className="text-sm">
+            Colors:{" "}
+            {product.colors.map((c, i) => (
+              <span key={c.color.id}>
+                <Link href={`/?color=${c.color.id}`} className="underline hover:text-foreground">
+                  {c.color.name}
+                </Link>
+                {i < product.colors.length - 1 ? ", " : ""}
+              </span>
+            ))}
+          </p>
         )}
 
         <div className="flex gap-6 text-sm">
           <p>Wholesale: {product.costWholesale != null ? `$${product.costWholesale.toFixed(2)}` : "—"}</p>
           <p>Retail: {product.costRetail != null ? `$${product.costRetail.toFixed(2)}` : "—"}</p>
         </div>
+
+        {product.pattern && (
+          <div className="rounded-md border border-border p-3 text-sm">
+            <Link href={`/?pattern=${product.pattern.id}`} className="font-medium underline hover:text-foreground">
+              Pattern: {product.pattern.name}
+            </Link>
+            <p className="mt-1 text-muted">
+              Difficulty {product.pattern.difficulty} · Enjoyment {product.pattern.enjoyment} · Preference{" "}
+              {product.pattern.preference}
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2 pt-2">
           <button

@@ -45,11 +45,11 @@ export default async function HomePage({
       </div>
 
       {hasFilters ? (
-        <FilteredResults where={where} sort={params.sort} />
+        <FilteredResults where={where} sort={params.sort} isAdmin={admin} />
       ) : (
         <div className="flex flex-col gap-12">
           {PRODUCT_CATEGORIES.map((category) => (
-            <CategorySection key={category} category={category} />
+            <CategorySection key={category} category={category} isAdmin={admin} />
           ))}
         </div>
       )}
@@ -57,7 +57,13 @@ export default async function HomePage({
   );
 }
 
-async function CategorySection({ category }: { category: (typeof PRODUCT_CATEGORIES)[number] }) {
+async function CategorySection({
+  category,
+  isAdmin,
+}: {
+  category: (typeof PRODUCT_CATEGORIES)[number];
+  isAdmin: boolean;
+}) {
   const products = await prisma.product.findMany({
     where: { category },
     orderBy: { createdAt: "desc" },
@@ -77,7 +83,7 @@ async function CategorySection({ category }: { category: (typeof PRODUCT_CATEGOR
       </div>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.id} product={product} isAdmin={isAdmin} />
         ))}
       </div>
     </section>
@@ -87,9 +93,11 @@ async function CategorySection({ category }: { category: (typeof PRODUCT_CATEGOR
 async function FilteredResults({
   where,
   sort,
+  isAdmin,
 }: {
   where: Awaited<ReturnType<typeof buildProductWhere>>;
   sort?: string;
+  isAdmin: boolean;
 }) {
   let products = await prisma.product.findMany({
     where,
@@ -106,7 +114,7 @@ async function FilteredResults({
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} isAdmin={isAdmin} />
       ))}
     </div>
   );

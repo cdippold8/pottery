@@ -1,8 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ProductWithRelations } from "@/lib/types";
+import FavoriteHeart from "./FavoriteHeart";
 
-export default function ProductCard({ product }: { product: ProductWithRelations }) {
+export default function ProductCard({
+  product,
+  isAdmin,
+}: {
+  product: ProductWithRelations;
+  isAdmin?: boolean;
+}) {
   const thumbnail = product.images[0];
 
   return (
@@ -27,12 +34,14 @@ export default function ProductCard({ product }: { product: ProductWithRelations
             Sold
           </span>
         )}
+        {isAdmin && (
+          <span className="absolute right-2 top-2">
+            <FavoriteHeart productId={product.id} initialFavorite={product.favorite} />
+          </span>
+        )}
       </div>
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-foreground">{product.name}</p>
-          {product.pattern && <p className="text-xs text-muted">{product.pattern.name}</p>}
-        </div>
+        <p className="text-sm font-medium text-foreground">{product.name}</p>
         {product.costRetail != null && (
           <p className="whitespace-nowrap text-sm text-muted">${product.costRetail.toFixed(2)}</p>
         )}

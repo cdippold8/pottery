@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CATEGORY_LABELS, ProductCategoryValue } from "@/lib/constants";
 
 // Server Component only — deliberately not "use client". Anything rendered
@@ -12,8 +13,8 @@ export default function ProductPublicView({
     category: ProductCategoryValue;
     sold: boolean;
     costRetail: number | null;
-    pattern: { name: string } | null;
-    colors: { color: { name: string } }[];
+    pattern: { id: string; name: string } | null;
+    colors: { color: { id: string; name: string } }[];
   };
 }) {
   return (
@@ -25,11 +26,31 @@ export default function ProductPublicView({
         </span>
       </div>
       <p className="text-sm text-muted">{CATEGORY_LABELS[product.category]}</p>
-      {product.pattern && <p className="text-sm">Pattern: {product.pattern.name}</p>}
+
       {product.colors.length > 0 && (
-        <p className="text-sm">Colors: {product.colors.map((c) => c.color.name).join(", ")}</p>
+        <p className="text-sm">
+          Colors:{" "}
+          {product.colors.map((c, i) => (
+            <span key={c.color.id}>
+              <Link href={`/?color=${c.color.id}`} className="underline hover:text-foreground">
+                {c.color.name}
+              </Link>
+              {i < product.colors.length - 1 ? ", " : ""}
+            </span>
+          ))}
+        </p>
       )}
+
       {product.costRetail != null && <p className="text-lg font-medium">${product.costRetail.toFixed(2)}</p>}
+
+      {product.pattern && (
+        <p className="text-sm">
+          Pattern:{" "}
+          <Link href={`/?pattern=${product.pattern.id}`} className="underline hover:text-foreground">
+            {product.pattern.name}
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

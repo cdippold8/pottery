@@ -75,6 +75,7 @@ export default function FilterBar({
           value={searchParams.get("category") ?? ""}
           options={categoryOptions}
           onChange={(v) => set("category", v)}
+          clearLabel="All categories"
         />
       )}
 
@@ -84,6 +85,7 @@ export default function FilterBar({
         options={patternOptions}
         onChange={(v) => set("pattern", v)}
         searchable
+        clearLabel="All patterns"
       />
 
       <FilterChip
@@ -92,6 +94,7 @@ export default function FilterBar({
         options={colorOptions}
         onChange={(v) => set("color", v)}
         searchable
+        clearLabel="All colors"
       />
 
       {isAdmin && (
@@ -101,18 +104,21 @@ export default function FilterBar({
             value={searchParams.get("difficulty") ?? ""}
             options={SCORE_OPTIONS}
             onChange={(v) => set("difficulty", v)}
+            clearLabel="Any difficulty"
           />
           <FilterChip
             label="Enjoyment"
             value={searchParams.get("enjoyment") ?? ""}
             options={SCORE_OPTIONS}
             onChange={(v) => set("enjoyment", v)}
+            clearLabel="Any enjoyment"
           />
           <FilterChip
             label="Ease"
             value={searchParams.get("preference") ?? ""}
             options={SCORE_OPTIONS}
             onChange={(v) => set("preference", v)}
+            clearLabel="Any ease"
           />
           <ToggleChip
             label="Favorites"
@@ -138,6 +144,7 @@ function FilterChip({
   onChange,
   searchable,
   alwaysShowLabel,
+  clearLabel,
 }: {
   label: string;
   value: string;
@@ -145,6 +152,7 @@ function FilterChip({
   onChange: (value: string) => void;
   searchable?: boolean;
   alwaysShowLabel?: boolean;
+  clearLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -159,7 +167,7 @@ function FilterChip({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`relative z-30 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
+        className={`relative z-20 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition ${
           selected
             ? "border-foreground bg-foreground text-background"
             : "border-border bg-background text-foreground hover:border-foreground"
@@ -178,7 +186,7 @@ function FilterChip({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-48 rounded-md border border-border bg-background shadow-lg">
+        <div className="absolute z-30 mt-1 w-48 rounded-md border border-border bg-background shadow-lg">
           {searchable && (
             <div className="p-2">
               <input
@@ -204,7 +212,7 @@ function FilterChip({
                     !value ? "font-medium text-foreground" : "text-muted"
                   }`}
                 >
-                  All {label.toLowerCase()}
+                  {clearLabel ?? `All ${label.toLowerCase()}`}
                 </button>
               </li>
             )}

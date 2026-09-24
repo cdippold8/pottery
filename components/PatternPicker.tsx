@@ -89,14 +89,14 @@ export default function PatternPicker({
         type="button"
         data-testid="pattern-picker-trigger"
         onClick={() => setOpen((v) => !v)}
-        className="relative z-30 flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
+        className="relative z-20 flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
       >
         {selected?.referenceImage ? (
-          <span className="relative h-8 w-8 overflow-hidden rounded">
-            <Image src={selected.referenceImage} alt="" fill className="object-cover" />
+          <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded">
+            <Image src={selected.referenceImage} alt="" fill className="scale-150 object-cover" />
           </span>
         ) : (
-          <span className="h-8 w-8 rounded bg-neutral-100" />
+          <span className="h-8 w-8 shrink-0 rounded bg-neutral-100" />
         )}
         <span className={selected ? "text-foreground" : "text-muted"}>
           {selected ? selected.name : "Select a pattern"}
@@ -104,7 +104,7 @@ export default function PatternPicker({
       </button>
 
       {open && (
-        <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
+        <div className="absolute z-30 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
           <div className="p-2">
             <input
               type="text"
@@ -127,11 +127,11 @@ export default function PatternPicker({
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-neutral-50"
                 >
                   {p.referenceImage ? (
-                    <span className="relative h-8 w-8 overflow-hidden rounded">
-                      <Image src={p.referenceImage} alt="" fill className="object-cover" />
+                    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded">
+                      <Image src={p.referenceImage} alt="" fill className="scale-150 object-cover" />
                     </span>
                   ) : (
-                    <span className="h-8 w-8 rounded bg-neutral-100" />
+                    <span className="h-8 w-8 shrink-0 rounded bg-neutral-100" />
                   )}
                   {p.name}
                 </button>
