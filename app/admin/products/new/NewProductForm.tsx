@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/app/actions/products";
 import { analyzeProductImages } from "@/app/actions/ai";
@@ -18,8 +18,8 @@ export default function NewProductForm({
   aiEnabled: boolean;
 }) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const previews = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files]);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<string>("mug");
   const [suggestion, setSuggestion] = useState<{ pattern: string; colors: string; notes: string } | null>(
@@ -29,18 +29,31 @@ export default function NewProductForm({
   const [isSubmitting, startSubmitting] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleFilesChange() {
-    const files = fileInputRef.current?.files;
-    setPreviews(files ? Array.from(files).map((f) => URL.createObjectURL(f)) : []);
+  useEffect(() => {
+    return () => previews.forEach((u) => URL.revokeObjectURL(u));
+  }, [previews]);
+
+  function handleFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files;
+    if (picked && picked.length > 0) {
+      setFiles((prev) => [...prev, ...Array.from(picked)]);
+    }
+    setSuggestion(null);
+    // Allow re-selecting the same file(s) later and keep the curated list in
+    // React state rather than the input's own (unremovable) FileList.
+    e.target.value = "";
+  }
+
+  function handleRemovePhoto(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
     setSuggestion(null);
   }
 
   function handleAnalyze() {
-    const files = fileInputRef.current?.files;
-    if (!files || files.length === 0) return;
+    if (files.length === 0) return;
 
     const formData = new FormData();
-    Array.from(files).forEach((f) => formData.append("images", f));
+    files.forEach((f) => formData.append("images", f));
 
     setError(null);
     startAnalyzing(async () => {
@@ -63,6 +76,7 @@ export default function NewProductForm({
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    files.forEach((f) => formData.append("images", f));
     startSubmitting(async () => {
       try {
         await createProduct(formData);
@@ -95,9 +109,7 @@ export default function NewProductForm({
           </svg>
           Upload photos
           <input
-            ref={fileInputRef}
             type="file"
-            name="images"
             accept="image/*"
             multiple
             onChange={handleFilesChange}
@@ -107,8 +119,18 @@ export default function NewProductForm({
         {previews.length > 0 && (
           <div className="mt-2 grid grid-cols-4 gap-2">
             {previews.map((src, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={src} alt="" className="aspect-square rounded object-cover" />
+              <div key={i} className="group relative aspect-square overflow-hidden rounded">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleRemovePhoto(i)}
+                  aria-label="Remove photo"
+                  className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs leading-none text-white transition sm:opacity-0 sm:group-hover:opacity-100"
+                >
+                  &times;
+                </button>
+              </div>
             ))}
           </div>
         )}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CATEGORY_LABELS, ProductCategoryValue } from "@/lib/constants";
+import { CATEGORY_LABELS, CHIP_LINK_CLASS, ProductCategoryValue } from "@/lib/constants";
 
 // Server Component only — deliberately not "use client". Anything rendered
 // here is safe to show to anonymous visitors, so this component (and only
@@ -28,28 +28,25 @@ export default function ProductPublicView({
       <p className="text-sm text-muted">{CATEGORY_LABELS[product.category]}</p>
 
       {product.colors.length > 0 && (
-        <p className="text-sm">
-          Colors:{" "}
-          {product.colors.map((c, i) => (
-            <span key={c.color.id}>
-              <Link href={`/?color=${c.color.id}`} className="underline hover:text-foreground">
-                {c.color.name}
-              </Link>
-              {i < product.colors.length - 1 ? ", " : ""}
-            </span>
+        <div className="flex flex-wrap items-center gap-1.5 text-sm">
+          <span>Colors:</span>
+          {product.colors.map((c) => (
+            <Link key={c.color.id} href={`/?color=${c.color.id}`} className={CHIP_LINK_CLASS}>
+              {c.color.name}
+            </Link>
           ))}
-        </p>
+        </div>
       )}
 
       {product.costRetail != null && <p className="text-lg font-medium">${product.costRetail.toFixed(2)}</p>}
 
       {product.pattern && (
-        <p className="text-sm">
-          Pattern:{" "}
-          <Link href={`/?pattern=${product.pattern.id}`} className="underline hover:text-foreground">
+        <div className="flex items-center gap-1.5 text-sm">
+          <span>Pattern:</span>
+          <Link href={`/?pattern=${product.pattern.id}`} className={CHIP_LINK_CLASS}>
             {product.pattern.name}
           </Link>
-        </p>
+        </div>
       )}
     </div>
   );

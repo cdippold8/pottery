@@ -10,3 +10,8 @@ export const CATEGORY_LABELS: Record<ProductCategoryValue, string> = {
 };
 
 export const HOMEPAGE_PREVIEW_COUNT = 6;
+
+// Rounded chip used for pattern/color references that link to the filtered
+// catalog -- no underline, fills solid on hover instead.
+export const CHIP_LINK_CLASS =
+  "rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition hover:border-foreground hover:bg-foreground hover:text-background";

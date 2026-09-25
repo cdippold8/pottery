@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CATEGORY_LABELS, PRODUCT_CATEGORIES, ProductCategoryValue } from "@/lib/constants";
+import { CATEGORY_LABELS, CHIP_LINK_CLASS, PRODUCT_CATEGORIES, ProductCategoryValue } from "@/lib/constants";
 // Only ever rendered for a logged-in admin (see app/product/[id]/page.tsx) —
 // anonymous visitors get ProductPublicView instead, which is a plain Server
 // Component and never serializes internal fields to the client.
@@ -92,17 +92,14 @@ export default function ProductDetailPanel({
         )}
 
         {product.colors.length > 0 && (
-          <p className="text-sm">
-            Colors:{" "}
-            {product.colors.map((c, i) => (
-              <span key={c.color.id}>
-                <Link href={`/?color=${c.color.id}`} className="underline hover:text-foreground">
-                  {c.color.name}
-                </Link>
-                {i < product.colors.length - 1 ? ", " : ""}
-              </span>
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span>Colors:</span>
+            {product.colors.map((c) => (
+              <Link key={c.color.id} href={`/?color=${c.color.id}`} className={CHIP_LINK_CLASS}>
+                {c.color.name}
+              </Link>
             ))}
-          </p>
+          </div>
         )}
 
         <div className="flex gap-6 text-sm">
@@ -112,9 +109,12 @@ export default function ProductDetailPanel({
 
         {product.pattern && (
           <div className="rounded-md border border-border p-3 text-sm">
-            <Link href={`/?pattern=${product.pattern.id}`} className="font-medium underline hover:text-foreground">
-              Pattern: {product.pattern.name}
-            </Link>
+            <p className="mb-1.5 flex items-center gap-1.5 font-medium">
+              Pattern:
+              <Link href={`/?pattern=${product.pattern.id}`} className={CHIP_LINK_CLASS}>
+                {product.pattern.name}
+              </Link>
+            </p>
             <p className="mt-1 text-muted">
               Difficulty {product.pattern.difficulty} · Enjoyment {product.pattern.enjoyment} · Preference{" "}
               {product.pattern.preference}

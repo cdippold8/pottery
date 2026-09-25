@@ -39,52 +39,89 @@ export default function ProductImages({
     });
   }
 
+  const [hero, ...rest] = images;
+
   return (
-    <div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {images.map((image, index) => (
-          <div key={image.id} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+    <div className="flex flex-col gap-2">
+      {hero && (
+        <div className="group relative aspect-square w-full overflow-hidden rounded-lg border border-border sm:aspect-[4/3]">
+          <button
+            type="button"
+            onClick={() => setFullscreenIndex(0)}
+            className="absolute inset-0"
+            aria-label="View image 1 full screen"
+          >
+            <Image
+              src={hero.url}
+              alt={`${productName} photo 1`}
+              fill
+              sizes="(min-width: 640px) 60vw, 100vw"
+              priority
+              className="object-cover"
+            />
+          </button>
+          {isAdmin && (
             <button
               type="button"
-              onClick={() => setFullscreenIndex(index)}
-              className="absolute inset-0"
-              aria-label={`View image ${index + 1} full screen`}
-            >
-              <Image
-                src={image.url}
-                alt={`${productName} photo ${index + 1}`}
-                fill
-                sizes="(min-width: 640px) 33vw, 50vw"
-                className="object-cover"
-              />
-            </button>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => handleDelete(image.id)}
-                disabled={isPending}
-                className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-2 py-1 text-xs text-white transition sm:opacity-0 sm:group-hover:opacity-100"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        ))}
-
-        {isAdmin && (
-          <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-xs text-muted hover:border-foreground hover:text-foreground">
-            {isPending ? "Uploading..." : "+ Upload image"}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleUpload}
+              onClick={() => handleDelete(hero.id)}
               disabled={isPending}
-            />
-          </label>
-        )}
-      </div>
+              className="absolute right-2 top-2 rounded-full bg-black/60 px-2.5 py-1 text-xs text-white transition sm:opacity-0 sm:group-hover:opacity-100"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
+
+      {rest.length > 0 && (
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+          {rest.map((image, i) => {
+            const index = i + 1;
+            return (
+              <div key={image.id} className="group relative aspect-square overflow-hidden rounded-lg border border-border">
+                <button
+                  type="button"
+                  onClick={() => setFullscreenIndex(index)}
+                  className="absolute inset-0"
+                  aria-label={`View image ${index + 1} full screen`}
+                >
+                  <Image
+                    src={image.url}
+                    alt={`${productName} photo ${index + 1}`}
+                    fill
+                    sizes="20vw"
+                    className="object-cover"
+                  />
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(image.id)}
+                    disabled={isPending}
+                    className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white transition sm:opacity-0 sm:group-hover:opacity-100"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {isAdmin && (
+        <label className="w-fit cursor-pointer text-xs text-muted underline-offset-2 hover:text-foreground hover:underline">
+          {isPending ? "Uploading..." : "+ Upload image"}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleUpload}
+            disabled={isPending}
+          />
+        </label>
+      )}
 
       {fullscreenIndex !== null && images[fullscreenIndex] && (
         <div

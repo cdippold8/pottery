@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { createColor, deleteColor } from "@/app/actions/colors";
 
 type Color = {
@@ -76,7 +77,10 @@ export default function ColorsManager({ initialColors }: { initialColors: Color[
           <div key={c.id} className="flex items-center gap-3 py-3">
             <div className="flex-1">
               <p className="text-sm font-medium">
-                {c.name} {c.brand && <span className="font-normal text-muted">— {c.brand}</span>}
+                <Link href={`/?color=${c.id}`} className="hover:underline">
+                  {c.name}
+                </Link>{" "}
+                {c.brand && <span className="font-normal text-muted">— {c.brand}</span>}
               </p>
               <p className="text-xs text-muted">
                 {c.glazeType === "glaze" ? "Glaze" : "Underglaze"} ·{" "}

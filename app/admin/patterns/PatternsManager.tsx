@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { createPattern, deletePattern } from "@/app/actions/patterns";
 import { patternValue } from "@/lib/value";
 
@@ -95,7 +96,10 @@ export default function PatternsManager({ initialPatterns }: { initialPatterns: 
             )}
             <div className="flex-1">
               <p className="text-sm font-medium">
-                {p.name} {p.favorite && <span className="text-amber-500">&#9733;</span>}
+                <Link href={`/?pattern=${p.id}`} className="hover:underline">
+                  {p.name}
+                </Link>{" "}
+                {p.favorite && <span className="text-amber-500">&#9733;</span>}
               </p>
               <p className="text-xs text-muted">
                 Difficulty {p.difficulty} · Enjoyment {p.enjoyment} · Preference {p.preference} · Value{" "}
