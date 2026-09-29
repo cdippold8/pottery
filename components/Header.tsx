@@ -22,6 +22,9 @@ export default async function Header() {
               >
                 + Add new product
               </Link>
+              <Link href="/admin/products/bulk" className="hidden text-muted hover:text-foreground sm:inline">
+                Bulk upload
+              </Link>
               <Link href="/admin/patterns" className="hidden text-muted hover:text-foreground sm:inline">
                 Patterns
               </Link>

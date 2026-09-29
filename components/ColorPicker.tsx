@@ -8,9 +8,11 @@ export type ColorOption = { id: string; name: string; brand: string | null };
 export default function ColorPicker({
   colors,
   initialSelectedIds,
+  name = "colorIds",
 }: {
   colors: ColorOption[];
   initialSelectedIds?: string[];
+  name?: string;
 }) {
   const [options, setOptions] = useState(colors);
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds ?? []);
@@ -74,7 +76,7 @@ export default function ColorPicker({
   return (
     <div className="relative">
       {selectedIds.map((id) => (
-        <input key={id} type="hidden" name="colorIds" value={id} />
+        <input key={id} type="hidden" name={name} value={id} />
       ))}
       <label className="mb-1 block text-sm font-medium text-foreground">Colors</label>
 

@@ -16,9 +16,11 @@ export type PatternOption = {
 export default function PatternPicker({
   patterns,
   initialSelectedId,
+  name = "patternId",
 }: {
   patterns: PatternOption[];
   initialSelectedId?: string | null;
+  name?: string;
 }) {
   const [options, setOptions] = useState(patterns);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
@@ -82,7 +84,7 @@ export default function PatternPicker({
 
   return (
     <div className="relative">
-      <input type="hidden" name="patternId" value={selectedId ?? ""} />
+      <input type="hidden" name={name} value={selectedId ?? ""} />
       <label className="mb-1 block text-sm font-medium text-foreground">Pattern</label>
 
       <button
