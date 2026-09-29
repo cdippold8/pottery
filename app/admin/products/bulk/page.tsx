@@ -4,6 +4,12 @@ import { isAdmin } from "@/lib/auth";
 import { isAiConfigured } from "@/lib/ai";
 import BulkUploadForm from "./BulkUploadForm";
 
+// Creating a whole batch of products is one Server Action request that
+// uploads every photo to Blob storage — raise the execution limit above
+// Vercel's default (10s) so a real-sized batch has room to finish instead
+// of the function getting killed mid-request.
+export const maxDuration = 60;
+
 export default async function BulkUploadPage() {
   if (!(await isAdmin())) redirect("/admin/login?redirectTo=/admin/products/bulk");
 

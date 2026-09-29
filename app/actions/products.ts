@@ -79,10 +79,14 @@ export type BulkCreateResult = {
 // One photo -> one product. Each item's fields are namespaced by a client-
 // generated key (name_<key>, category_<key>, etc.) so a single form can
 // carry an arbitrary number of draft products; itemKeys lists which keys to
-// process, in order. Items are created one at a time and a failure on one
-// (a bad file, a missing name) is reported back rather than aborting the
-// rest of the batch, since the whole point of bulk upload is not losing
-// everything else in it to one bad photo.
+// process. Items are created concurrently rather than one at a time —
+// each upload is a network round trip to Blob storage, and a sequential
+// loop over a real-sized batch can add up to more than a serverless
+// function's execution timeout, which kills the request outright before
+// any response (including partial failures) reaches the client. A failure
+// on one item (a bad file, a missing name) is reported back rather than
+// aborting the rest of the batch, since the whole point of bulk upload is
+// not losing everything else in it to one bad photo.
 export async function createProductsBulk(formData: FormData): Promise<BulkCreateResult> {
   await requireAdmin();
 
@@ -91,48 +95,63 @@ export async function createProductsBulk(formData: FormData): Promise<BulkCreate
     .map((k) => k.trim())
     .filter(Boolean);
 
+  const results = await Promise.all(
+    keys.map(async (key) => {
+      const name = String(formData.get(`name_${key}`) ?? "").trim();
+      try {
+        if (!name) throw new Error("Name is required");
+
+        const category = readCategory(formData, `category_${key}`);
+        const patternId = String(formData.get(`patternId_${key}`) ?? "") || null;
+        const colorIds = formData.getAll(`colorIds_${key}`).map(String).filter(Boolean);
+        const costWholesale = readOptionalNumber(formData, `costWholesale_${key}`);
+        const costRetail = readOptionalNumber(formData, `costRetail_${key}`);
+
+        const file = formData.get(`image_${key}`);
+        if (!(file instanceof File) || file.size === 0) throw new Error("Photo is missing");
+        const imageUrl = await saveUploadedImage(file);
+
+        const product = await prisma.product.create({
+          data: {
+            name,
+            category,
+            patternId,
+            costWholesale,
+            costRetail,
+            images: { create: [{ url: imageUrl, order: 0 }] },
+            colors: { create: colorIds.map((colorId) => ({ colorId })) },
+          },
+        });
+
+        if (patternId) {
+          await prisma.pattern.updateMany({
+            where: { id: patternId, referenceImage: null },
+            data: { referenceImage: imageUrl },
+          });
+        }
+
+        return { ok: true as const, key, id: product.id, name: product.name, category };
+      } catch (err) {
+        return {
+          ok: false as const,
+          key,
+          name,
+          error: err instanceof Error ? err.message : "Could not create product",
+        };
+      }
+    })
+  );
+
   const created: BulkCreateResult["created"] = [];
   const failed: BulkCreateResult["failed"] = [];
   const categoriesTouched = new Set<ProductCategoryValue>();
 
-  for (const key of keys) {
-    const name = String(formData.get(`name_${key}`) ?? "").trim();
-    try {
-      if (!name) throw new Error("Name is required");
-
-      const category = readCategory(formData, `category_${key}`);
-      const patternId = String(formData.get(`patternId_${key}`) ?? "") || null;
-      const colorIds = formData.getAll(`colorIds_${key}`).map(String).filter(Boolean);
-      const costWholesale = readOptionalNumber(formData, `costWholesale_${key}`);
-      const costRetail = readOptionalNumber(formData, `costRetail_${key}`);
-
-      const file = formData.get(`image_${key}`);
-      if (!(file instanceof File) || file.size === 0) throw new Error("Photo is missing");
-      const imageUrl = await saveUploadedImage(file);
-
-      const product = await prisma.product.create({
-        data: {
-          name,
-          category,
-          patternId,
-          costWholesale,
-          costRetail,
-          images: { create: [{ url: imageUrl, order: 0 }] },
-          colors: { create: colorIds.map((colorId) => ({ colorId })) },
-        },
-      });
-
-      if (patternId) {
-        await prisma.pattern.updateMany({
-          where: { id: patternId, referenceImage: null },
-          data: { referenceImage: imageUrl },
-        });
-      }
-
-      created.push({ key, id: product.id, name: product.name });
-      categoriesTouched.add(category);
-    } catch (err) {
-      failed.push({ key, name, error: err instanceof Error ? err.message : "Could not create product" });
+  for (const result of results) {
+    if (result.ok) {
+      created.push({ key: result.key, id: result.id, name: result.name });
+      categoriesTouched.add(result.category);
+    } else {
+      failed.push({ key: result.key, name: result.name, error: result.error });
     }
   }
 
