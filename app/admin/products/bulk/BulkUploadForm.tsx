@@ -9,7 +9,13 @@ import { CATEGORY_LABELS, PRODUCT_CATEGORIES } from "@/lib/constants";
 import PatternPicker, { PatternOption } from "@/components/PatternPicker";
 import ColorPicker, { ColorOption } from "@/components/ColorPicker";
 
-type Suggestion = { patternGuess: string; colorGuesses: string; notes: string };
+type Suggestion = {
+  patternGuess: string;
+  patternMatched: boolean;
+  colorGuesses: string;
+  colorsMatched: boolean;
+  notes: string;
+};
 
 type BulkItem = {
   key: string;
@@ -17,10 +23,16 @@ type BulkItem = {
   previewUrl: string;
   name: string;
   category: string;
+  patternId: string | null;
+  colorIds: string[];
   analyzing: boolean;
   suggestion: Suggestion | null;
   error: string | null;
 };
+
+function normalize(s: string): string {
+  return s.trim().toLowerCase();
+}
 
 export default function BulkUploadForm({
   patterns,
@@ -60,13 +72,47 @@ export default function BulkUploadForm({
     (async () => {
       try {
         const result = await analyzeProductImages(formData);
+        if (!result) {
+          updateItem(key, { analyzing: false });
+          return;
+        }
+
+        // The AI is prompted to reuse an existing pattern/color name verbatim
+        // when one clearly matches, so a case-insensitive exact match against
+        // the catalog is enough to auto-select it in the pickers — anything
+        // that doesn't match is a new suggestion the admin still has to
+        // create (via the picker's own "+ Add new" control) or correct.
+        const matchedPattern = result.patternGuess
+          ? patterns.find((p) => normalize(p.name) === normalize(result.patternGuess))
+          : undefined;
+        const matchedColors = result.colorGuesses
+          .map((guess) => colors.find((c) => normalize(c.name) === normalize(guess)))
+          .filter((c): c is ColorOption => Boolean(c));
+
+        const titlePattern = matchedPattern?.name || result.patternGuess;
+        const titleColors = (matchedColors.length > 0 ? matchedColors.map((c) => c.name) : result.colorGuesses).slice(
+          0,
+          2
+        );
+        const name = titlePattern
+          ? titleColors.length > 0
+            ? `${titlePattern}: ${titleColors.join(" & ")}`
+            : titlePattern
+          : result.name;
+
         updateItem(key, {
           analyzing: false,
-          name: result?.name ?? "",
-          category: result?.category ?? "mug",
-          suggestion: result
-            ? { patternGuess: result.patternGuess, colorGuesses: result.colorGuesses.join(", "), notes: result.notes }
-            : null,
+          name,
+          category: result.category,
+          patternId: matchedPattern?.id ?? null,
+          colorIds: matchedColors.map((c) => c.id),
+          suggestion: {
+            patternGuess: result.patternGuess,
+            patternMatched: Boolean(matchedPattern),
+            colorGuesses: result.colorGuesses.join(", "),
+            colorsMatched: matchedColors.length > 0 && matchedColors.length === result.colorGuesses.length,
+            notes: result.notes,
+          },
         });
       } catch {
         updateItem(key, { analyzing: false });
@@ -84,6 +130,8 @@ export default function BulkUploadForm({
       previewUrl: URL.createObjectURL(file),
       name: "",
       category: "mug",
+      patternId: null,
+      colorIds: [],
       analyzing: aiEnabled,
       suggestion: null,
       error: null,
@@ -189,8 +237,10 @@ export default function BulkUploadForm({
 
                 {item.suggestion && (
                   <p className="mt-2 rounded bg-neutral-50 p-2 text-xs text-muted">
-                    AI guesses: pattern &ldquo;{item.suggestion.patternGuess}&rdquo;, colors{" "}
+                    AI: pattern &ldquo;{item.suggestion.patternGuess}&rdquo;
+                    {item.suggestion.patternMatched ? " (matched)" : " (new — create or pick manually)"}, colors{" "}
                     {item.suggestion.colorGuesses}
+                    {item.suggestion.colorsMatched ? " (matched)" : " (new — create or pick manually)"}
                     {item.suggestion.notes ? ` — ${item.suggestion.notes}` : ""}
                   </p>
                 )}
@@ -234,8 +284,22 @@ export default function BulkUploadForm({
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <PatternPicker patterns={patterns} name={`patternId_${item.key}`} />
-                  <ColorPicker colors={colors} name={`colorIds_${item.key}`} />
+                  {/* Keyed on whether AI analysis has resolved so the picker
+                      remounts (and re-reads its initial selection) once a
+                      match comes in — these pickers otherwise only read
+                      initialSelectedId/Ids once, at mount. */}
+                  <PatternPicker
+                    key={`pattern-${item.analyzing}`}
+                    patterns={patterns}
+                    initialSelectedId={item.patternId}
+                    name={`patternId_${item.key}`}
+                  />
+                  <ColorPicker
+                    key={`colors-${item.analyzing}`}
+                    colors={colors}
+                    initialSelectedIds={item.colorIds}
+                    name={`colorIds_${item.key}`}
+                  />
                 </div>
 
                 {item.error && <p className="mt-2 text-xs text-red-600">Could not create: {item.error}</p>}
