@@ -17,10 +17,12 @@ export default function PatternPicker({
   patterns,
   initialSelectedId,
   name = "patternId",
+  disabled = false,
 }: {
   patterns: PatternOption[];
   initialSelectedId?: string | null;
   name?: string;
+  disabled?: boolean;
 }) {
   const [options, setOptions] = useState(patterns);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
@@ -91,7 +93,8 @@ export default function PatternPicker({
         type="button"
         data-testid="pattern-picker-trigger"
         onClick={() => setOpen((v) => !v)}
-        className="relative z-20 flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
+        disabled={disabled}
+        className="relative z-20 flex w-full items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         {selected?.referenceImage ? (
           <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded">

@@ -34,6 +34,16 @@ function normalize(s: string): string {
   return s.trim().toLowerCase();
 }
 
+// Submitting the whole batch as one request doesn't scale: on Vercel, a
+// request that uploads many full-resolution photos at once can run past
+// either the body size limit or the function's execution time, and the
+// platform kills it outright -- the client gets back something that isn't a
+// valid Server Action response ("An unexpected response was received from
+// the server") instead of a usable error. Splitting the batch into small
+// chunks keeps every individual request comfortably inside both limits
+// regardless of how many photos are in the batch overall.
+const BULK_CHUNK_SIZE = 4;
+
 export default function BulkUploadForm({
   patterns,
   colors,
@@ -49,6 +59,7 @@ export default function BulkUploadForm({
   const [items, setItems] = useState<BulkItem[]>([]);
   const [created, setCreated] = useState<{ key: string; id: string; name: string }[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitProgress, setSubmitProgress] = useState<{ done: number; total: number } | null>(null);
   const [isSubmitting, startSubmitting] = useTransition();
 
   useEffect(() => {
@@ -156,29 +167,69 @@ export default function BulkUploadForm({
     if (items.length === 0) return;
     setSubmitError(null);
 
-    const keys = items.map((item) => item.key);
-    formData.set("itemKeys", keys.join(","));
-    items.forEach((item) => formData.append(`image_${item.key}`, item.file));
+    // formData here already has every field from every card (React collects
+    // it from the whole <form>) -- split it into one smaller FormData per
+    // chunk of items and submit those one at a time, rather than sending
+    // everything in a single request.
+    const snapshot = items;
+    const chunks: BulkItem[][] = [];
+    for (let i = 0; i < snapshot.length; i += BULK_CHUNK_SIZE) {
+      chunks.push(snapshot.slice(i, i + BULK_CHUNK_SIZE));
+    }
+
+    setSubmitProgress({ done: 0, total: snapshot.length });
 
     startSubmitting(async () => {
-      try {
-        const result = await createProductsBulk(formData);
+      let completedCount = 0;
 
-        if (result.created.length > 0) {
-          setCreated((prev) => [...result.created, ...prev]);
+      for (const chunk of chunks) {
+        const chunkFormData = new FormData();
+        const chunkKeys = chunk.map((item) => item.key);
+        chunkFormData.set("itemKeys", chunkKeys.join(","));
+        chunk.forEach((item) => {
+          chunkFormData.set(`name_${item.key}`, formData.get(`name_${item.key}`) ?? "");
+          chunkFormData.set(`category_${item.key}`, formData.get(`category_${item.key}`) ?? "");
+          const patternId = formData.get(`patternId_${item.key}`);
+          if (patternId) chunkFormData.set(`patternId_${item.key}`, patternId);
+          formData.getAll(`colorIds_${item.key}`).forEach((v) => chunkFormData.append(`colorIds_${item.key}`, v));
+          const wholesale = formData.get(`costWholesale_${item.key}`);
+          if (wholesale) chunkFormData.set(`costWholesale_${item.key}`, wholesale);
+          const retail = formData.get(`costRetail_${item.key}`);
+          if (retail) chunkFormData.set(`costRetail_${item.key}`, retail);
+          chunkFormData.append(`image_${item.key}`, item.file);
+        });
+
+        try {
+          const result = await createProductsBulk(chunkFormData);
+
+          if (result.created.length > 0) {
+            setCreated((prev) => [...result.created, ...prev]);
+          }
+
+          const failedByKey = new Map(result.failed.map((f) => [f.key, f.error]));
+          setItems((prev) => {
+            const createdKeys = new Set(result.created.map((c) => c.key));
+            prev.filter((item) => createdKeys.has(item.key)).forEach((item) => URL.revokeObjectURL(item.previewUrl));
+            return prev
+              .filter((item) => !createdKeys.has(item.key))
+              .map((item) => (chunkKeys.includes(item.key) ? { ...item, error: failedByKey.get(item.key) ?? null } : item));
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Could not create products";
+          setSubmitError(
+            completedCount > 0
+              ? `${message} — anything already created above is safe; the rest is still here, try again`
+              : message
+          );
+          setSubmitProgress(null);
+          return;
         }
 
-        const failedByKey = new Map(result.failed.map((f) => [f.key, f.error]));
-        setItems((prev) => {
-          const createdKeys = new Set(result.created.map((c) => c.key));
-          prev.filter((item) => createdKeys.has(item.key)).forEach((item) => URL.revokeObjectURL(item.previewUrl));
-          return prev
-            .filter((item) => !createdKeys.has(item.key))
-            .map((item) => ({ ...item, error: failedByKey.get(item.key) ?? null }));
-        });
-      } catch (err) {
-        setSubmitError(err instanceof Error ? err.message : "Could not create products");
+        completedCount += chunk.length;
+        setSubmitProgress({ done: completedCount, total: snapshot.length });
       }
+
+      setSubmitProgress(null);
     });
   }
 
@@ -287,18 +338,23 @@ export default function BulkUploadForm({
                   {/* Keyed on whether AI analysis has resolved so the picker
                       remounts (and re-reads its initial selection) once a
                       match comes in — these pickers otherwise only read
-                      initialSelectedId/Ids once, at mount. */}
+                      initialSelectedId/Ids once, at mount. Disabled while
+                      analyzing so a selection made in that window (including
+                      creating a brand new pattern/color) can't get silently
+                      discarded by that remount when the AI result lands. */}
                   <PatternPicker
                     key={`pattern-${item.analyzing}`}
                     patterns={patterns}
                     initialSelectedId={item.patternId}
                     name={`patternId_${item.key}`}
+                    disabled={item.analyzing}
                   />
                   <ColorPicker
                     key={`colors-${item.analyzing}`}
                     colors={colors}
                     initialSelectedIds={item.colorIds}
                     name={`colorIds_${item.key}`}
+                    disabled={item.analyzing}
                   />
                 </div>
 
@@ -318,7 +374,9 @@ export default function BulkUploadForm({
               className="rounded-md bg-foreground px-4 py-2 text-sm text-background"
             >
               {isSubmitting
-                ? "Creating..."
+                ? submitProgress
+                  ? `Creating... (${submitProgress.done}/${submitProgress.total})`
+                  : "Creating..."
                 : `Create ${items.length} product${items.length === 1 ? "" : "s"}`}
             </button>
             <button

@@ -9,10 +9,12 @@ export default function ColorPicker({
   colors,
   initialSelectedIds,
   name = "colorIds",
+  disabled = false,
 }: {
   colors: ColorOption[];
   initialSelectedIds?: string[];
   name?: string;
+  disabled?: boolean;
 }) {
   const [options, setOptions] = useState(colors);
   const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds ?? []);
@@ -84,7 +86,8 @@ export default function ColorPicker({
         type="button"
         data-testid="color-picker-trigger"
         onClick={() => setOpen((v) => !v)}
-        className="relative z-20 flex w-full flex-wrap items-center gap-1 rounded-md border border-border bg-background px-3 py-2 text-left text-sm"
+        disabled={disabled}
+        className="relative z-20 flex w-full flex-wrap items-center gap-1 rounded-md border border-border bg-background px-3 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
       >
         {selected.length === 0 && <span className="text-muted">Select colors</span>}
         {selected.map((c) => (
