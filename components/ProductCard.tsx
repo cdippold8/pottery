@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ProductWithRelations } from "@/lib/types";
 import FavoriteHeart from "./FavoriteHeart";
+import AddToRequestButton from "./AddToRequestButton";
 
 export default function ProductCard({
   product,
@@ -29,10 +30,16 @@ export default function ProductCard({
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted">No photo</div>
         )}
-        {product.sold && (
+        {product.sold ? (
           <span className="absolute left-2 top-2 rounded-full bg-foreground px-2 py-0.5 text-xs font-medium text-background">
             Sold
           </span>
+        ) : (
+          product.requestedInId && (
+            <span className="absolute left-2 top-2 rounded-full bg-amber-600 px-2 py-0.5 text-xs font-medium text-white">
+              Requested
+            </span>
+          )
         )}
         {isAdmin && (
           <span className="absolute right-2 top-2">
@@ -46,6 +53,9 @@ export default function ProductCard({
           <p className="whitespace-nowrap text-sm text-muted">${product.costRetail.toFixed(2)}</p>
         )}
       </div>
+      {!isAdmin && (
+        <AddToRequestButton productId={product.id} disabled={product.sold || Boolean(product.requestedInId)} />
+      )}
     </Link>
   );
 }

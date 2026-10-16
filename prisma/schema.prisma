@@ -61,10 +61,17 @@ model Product {
   costRetail    Float?
   sold          Boolean   @default(false)
   favorite      Boolean   @default(false)
+  // Set while this piece is held by a pending request, so it can't be
+  // requested twice -- cleared when the request is cancelled or when an
+  // item is removed from it, and left set (alongside sold=true) once the
+  // request is fulfilled.
+  requestedInId String?
+  requestedIn   Request?  @relation("ProductHold", fields: [requestedInId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   images        ProductImage[]
   colors        ProductColor[]
+  requestItems  RequestItem[]
 }
 
 model ProductImage {
@@ -83,4 +90,46 @@ model ProductColor {
   color     Color   @relation(fields: [colorId], references: [id], onDelete: Cascade)
 
   @@id([productId, colorId])
+}
+
+enum RequestStatus {
+  pending
+  fulfilled
+  cancelled
+}
+
+// A buyer's request-to-purchase, built client-side like a cart then
+// submitted here in one shot with shipping info. Items snapshot their price
+// at request time (costWholesale/costRetail on RequestItem) so a later price
+// edit on the Product doesn't retroactively change an existing request.
+model Request {
+  id              String        @id @default(cuid())
+  status          RequestStatus @default(pending)
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  shippingLine1   String
+  shippingLine2   String?
+  shippingCity    String
+  shippingState   String
+  shippingZip     String
+  shippingCountry String        @default("United States")
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           RequestItem[]
+  heldProducts    Product[]     @relation("ProductHold")
+}
+
+model RequestItem {
+  id            String   @id @default(cuid())
+  requestId     String
+  request       Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  costWholesale Float?
+  costRetail    Float?
+  createdAt     DateTime @default(now())
+
+  @@unique([requestId, productId])
 }

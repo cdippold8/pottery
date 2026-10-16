@@ -38,6 +38,9 @@ cost), and pattern/color management on the same pages.
    - `BLOB_READ_WRITE_TOKEN` — optional locally. Leave blank and uploaded
      photos are written to `public/uploads/` on disk instead, which is fine
      for local dev. Required in production (see below).
+   - `RESEND_API_KEY` / `ADMIN_NOTIFICATION_EMAIL` — optional. If both are
+     set, you get an email when a visitor submits a request (see "Requests"
+     below). If unset, requests still save normally, just without the email.
 
 3. Create the database:
 
@@ -102,6 +105,13 @@ On the project's **Environment Variables** page, add:
 - `ADMIN_PASSWORD` — the password that unlocks admin mode
 - `SESSION_SECRET` — random string; generate with `openssl rand -hex 32`
 - `ANTHROPIC_API_KEY` — optional, for the AI photo-guessing feature
+- `RESEND_API_KEY` / `ADMIN_NOTIFICATION_EMAIL` — optional, for the request
+  email notification. Get a free key at resend.com → API Keys, and set
+  `ADMIN_NOTIFICATION_EMAIL` to the address that should receive it (your own
+  email, almost certainly — that's the same address you sign up to Resend
+  with, which works without verifying a domain). `RESEND_FROM_EMAIL` is
+  optional on top of that; leave it unset to send from Resend's shared
+  sandbox address.
 
 Then trigger a deploy (push any commit to the tracked branch — the
 Deployments tab should show it building). The build runs `prisma generate
@@ -158,6 +168,22 @@ start adding inventory.
   fields. Anonymous requests get the plain server-rendered public view
   instead, which never receives wholesale cost, difficulty/enjoyment/
   preference, or favorite in the first place.
+- `components/CartProvider.tsx` — the visitor-facing request cart. Just a
+  list of product ids in `localStorage` (via `useSyncExternalStore`, so it
+  survives reloads and stays in sync across tabs) — nothing is reserved
+  server-side until the cart is actually submitted.
+- `app/request/page.tsx` + `app/actions/requests.ts` — the public request
+  flow (review cart → shipping form → submit) and its Server Actions.
+  `submitRequest` re-checks every item inside one transaction right before
+  creating the `Request`, so two visitors can't both claim the same
+  one-of-a-kind piece even if it sat in both their carts at once.
+- `app/admin/requests/` — the admin side: a list page and a detail page
+  (remove an item, mark the whole request sold, cancel it) plus two route
+  handlers (`invoice/route.tsx`, `packing-slip/route.tsx`) that render a
+  PDF with `@react-pdf/renderer` (documents live in `lib/pdf/`).
+- `lib/email.ts` — sends the "new request" notification via Resend. A
+  no-op (not an error) when `RESEND_API_KEY`/`ADMIN_NOTIFICATION_EMAIL`
+  aren't set, and a failed send never blocks the request from saving.
 
 ## Public share link
 
@@ -165,6 +191,27 @@ There's no separate "public" route — the public view *is* the normal site,
 served to anyone without a valid admin session cookie. Send buyers the same
 homepage/category/product URLs you use yourself; they just won't see
 internal fields or admin controls.
+
+## Requests
+
+Anyone browsing the site can add pieces to a "request list" (every product
+card and the product page itself have an "Add to request" button), review
+it at `/request` — with running wholesale *and* retail totals, the one
+deliberate exception to wholesale being admin-only elsewhere in the app, since
+the point of this page is letting a buyer or retail partner weigh both — and
+submit it with a shipping address. That:
+
+- Creates a `Request` row and marks every item in it as held (shows a
+  "Requested" badge and can't be added to anyone else's request) so the same
+  one-of-a-kind piece can't be promised to two people.
+- Emails you (if Resend is configured) with what was requested and a link
+  to it in `/admin/requests`.
+
+From there you can drop an item back out of the request (releases its
+hold), mark the whole thing sold (marks every remaining item `sold`), or
+cancel it (releases every hold). The invoice and packing slip PDFs are
+generated on demand from the request's current items — remove something
+first and it won't be on either document.
 
 ## Branding
 

@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 import Logo from "./Logo";
+import CartBadge from "./CartBadge";
 import { logoutAction } from "@/app/actions/auth";
 
 export default async function Header() {
   const admin = await isAdmin();
+  const pendingCount = admin ? await prisma.request.count({ where: { status: "pending" } }) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
@@ -14,6 +17,7 @@ export default async function Header() {
         </Link>
 
         <nav className="flex items-center gap-3 text-sm">
+          <CartBadge />
           {admin ? (
             <>
               <Link
@@ -24,6 +28,14 @@ export default async function Header() {
               </Link>
               <Link href="/admin/products/bulk" className="hidden text-muted hover:text-foreground sm:inline">
                 Bulk upload
+              </Link>
+              <Link href="/admin/requests" className="hidden text-muted hover:text-foreground sm:inline">
+                Requests
+                {pendingCount > 0 && (
+                  <span className="ml-1 rounded-full bg-foreground px-1.5 py-0.5 text-xs font-medium text-background">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
               <Link href="/admin/patterns" className="hidden text-muted hover:text-foreground sm:inline">
                 Patterns
