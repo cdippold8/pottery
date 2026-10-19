@@ -77,58 +77,76 @@ export default function BulkUploadForm({
     setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...patch } : item)));
   }
 
-  function runAnalysis(key: string, file: File) {
+  async function runAnalysis(key: string, file: File): Promise<void> {
     const formData = new FormData();
     formData.append("images", file);
-    (async () => {
-      try {
-        const result = await analyzeProductImages(formData);
-        if (!result) {
-          updateItem(key, { analyzing: false });
-          return;
-        }
-
-        // The AI is prompted to reuse an existing pattern/color name verbatim
-        // when one clearly matches, so a case-insensitive exact match against
-        // the catalog is enough to auto-select it in the pickers — anything
-        // that doesn't match is a new suggestion the admin still has to
-        // create (via the picker's own "+ Add new" control) or correct.
-        const matchedPattern = result.patternGuess
-          ? patterns.find((p) => normalize(p.name) === normalize(result.patternGuess))
-          : undefined;
-        const matchedColors = result.colorGuesses
-          .map((guess) => colors.find((c) => normalize(c.name) === normalize(guess)))
-          .filter((c): c is ColorOption => Boolean(c));
-
-        const titlePattern = matchedPattern?.name || result.patternGuess;
-        const titleColors = (matchedColors.length > 0 ? matchedColors.map((c) => c.name) : result.colorGuesses).slice(
-          0,
-          2
-        );
-        const name = titlePattern
-          ? titleColors.length > 0
-            ? `${titlePattern}: ${titleColors.join(" & ")}`
-            : titlePattern
-          : result.name;
-
-        updateItem(key, {
-          analyzing: false,
-          name,
-          category: result.category,
-          patternId: matchedPattern?.id ?? null,
-          colorIds: matchedColors.map((c) => c.id),
-          suggestion: {
-            patternGuess: result.patternGuess,
-            patternMatched: Boolean(matchedPattern),
-            colorGuesses: result.colorGuesses.join(", "),
-            colorsMatched: matchedColors.length > 0 && matchedColors.length === result.colorGuesses.length,
-            notes: result.notes,
-          },
-        });
-      } catch {
+    try {
+      const result = await analyzeProductImages(formData);
+      if (!result) {
         updateItem(key, { analyzing: false });
+        return;
       }
-    })();
+
+      // The AI is prompted to reuse an existing pattern/color name verbatim
+      // when one clearly matches, so a case-insensitive exact match against
+      // the catalog is enough to auto-select it in the pickers — anything
+      // that doesn't match is a new suggestion the admin still has to
+      // create (via the picker's own "+ Add new" control) or correct.
+      const matchedPattern = result.patternGuess
+        ? patterns.find((p) => normalize(p.name) === normalize(result.patternGuess))
+        : undefined;
+      const matchedColors = result.colorGuesses
+        .map((guess) => colors.find((c) => normalize(c.name) === normalize(guess)))
+        .filter((c): c is ColorOption => Boolean(c));
+
+      const titlePattern = matchedPattern?.name || result.patternGuess;
+      const titleColors = (matchedColors.length > 0 ? matchedColors.map((c) => c.name) : result.colorGuesses).slice(
+        0,
+        2
+      );
+      const name = titlePattern
+        ? titleColors.length > 0
+          ? `${titlePattern}: ${titleColors.join(" & ")}`
+          : titlePattern
+        : result.name;
+
+      updateItem(key, {
+        analyzing: false,
+        name,
+        category: result.category,
+        patternId: matchedPattern?.id ?? null,
+        colorIds: matchedColors.map((c) => c.id),
+        suggestion: {
+          patternGuess: result.patternGuess,
+          patternMatched: Boolean(matchedPattern),
+          colorGuesses: result.colorGuesses.join(", "),
+          colorsMatched: matchedColors.length > 0 && matchedColors.length === result.colorGuesses.length,
+          notes: result.notes,
+        },
+      });
+    } catch {
+      updateItem(key, { analyzing: false });
+    }
+  }
+
+  // Vercel and the Anthropic API both have limits on how many requests can
+  // run at once -- firing every photo's analysis simultaneously is what
+  // overwhelmed a large batch and surfaced as an error right after upload.
+  // A small worker pool keeps only a few analyses in flight at a time; each
+  // photo still updates (and its pickers re-enable) as soon as its own turn
+  // finishes, not the whole batch.
+  const AI_ANALYSIS_CONCURRENCY = 3;
+
+  function runAnalysisQueue(queued: { key: string; file: File }[]) {
+    let next = 0;
+    async function worker() {
+      while (next < queued.length) {
+        const item = queued[next++];
+        await runAnalysis(item.key, item.file);
+      }
+    }
+    const workerCount = Math.min(AI_ANALYSIS_CONCURRENCY, queued.length);
+    for (let i = 0; i < workerCount; i++) worker();
   }
 
   function handleFilesAdded(e: React.ChangeEvent<HTMLInputElement>) {
@@ -151,7 +169,7 @@ export default function BulkUploadForm({
     e.target.value = "";
 
     if (aiEnabled) {
-      newItems.forEach((item) => runAnalysis(item.key, item.file));
+      runAnalysisQueue(newItems.map((item) => ({ key: item.key, file: item.file })));
     }
   }
 
